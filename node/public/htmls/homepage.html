@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<title>HSLColor</title>
+	
+<style>
+body{background:white;}
+  body,canvas {margin:0;padding:0;overflow:hidden;}
+</style>
+	<script type="text/javascript" src="../javascripts/paper.js"></script>
+	<script type="text/javascript" src="../javascripts/underscore-min.js"></script>
+	<script type="text/javascript" src="../javascripts/store.js"></script>
+	<script type="text/javascript">
+paper.install(window);
+window.onload = function(){
+//colz = store.get('colors');
+sinceLast = new Date().getTime(); 
+paper.setup();
+view = new View('canvas')
+var winx = window.innerWidth, winy = window.innerHeight;
+view.viewSize = new Size(winx, winy);
+var bg = new Path.Rectangle(0,0, view.bounds.width, view.bounds.height);
+bg.fillColor = "green";
+
+var bgcircle = new Path.Circle();
+var circle = [];
+paths = {tops:[], bottoms:[]};
+path = new Path(); 
+path.strokeColor = "black";
+
+paths.tool = new Tool();
+paths.tool.onMouseMove = function(event){
+  _.each(paths.tops, function(l){l.remove()})
+  _.each(paths.bottoms, function(l){l.remove()})
+  for (i = 0; i <winx; i+=30){
+    paths.tops[i] = path.clone();
+    paths.tops[i].add([i, 0]);
+    paths.tops[i].add(event.point);
+    paths.tops[i].add([i,winy]);
+  }
+  paths.bottoms[1] = path.clone();
+  paths.bottoms[1].add()
+  
+  for (i = 0; i <winy; i+=30){
+    paths.bottoms[i] = path.clone();
+    paths.bottoms[i].add([0, i]);
+    paths.bottoms[i].add(event.point);
+    paths.bottoms[i].add([winx,i]);
+  }
+}
+
+view.draw();
+// notes: smudge draw. user holds down to "soak" up color alpha, and then as they drag, the alpha decerases until gone. 
+  
+
+ };
+
+	</script>
+</head>
+<body>
+	<canvas id="canvas"></canvas>
+</body>
+</html>

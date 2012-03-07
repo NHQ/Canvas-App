@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<title>pie.chart</title>
+	<script type="text/javascript" src="../javascripts/paper.js"></script>
+	<script type="text/javascript" src="../javascripts/underscore-min.js"></script>
+	<script type="text/javascript" src="../javascripts/store.js"></script>
+	<script type="text/javascript">
+paper.install(window);
+window.onload = function(){
+var data = {
+  "data": [
+      {
+        "id": "110297092351369/insights/page_fans_gender_age/lifetime", 
+        "name": "page_fans_gender_age", 
+        "period": "lifetime", 
+        "values": [
+          {
+            "value": {
+              "M.25-34": 31, 
+              "M.35-44": 14, 
+              "F.25-34": 13, 
+              "F.35-44": 7, 
+              "M.45-54": 4, 
+              "F.55+": 3, 
+              "M.55+": 2, 
+              "F.18-24": 2, 
+              "M.18-24": 2, 
+              "U.UNKNOWN": 1, 
+              "U.25-34": 1, 
+              "M.13-17": 1, 
+              "F.45-54": 1
+            }, 
+            "end_time": "2011-12-09T08:00:00+0000"
+          }, 
+          {
+            "value": {
+              "M.25-34": 31, 
+              "M.35-44": 14, 
+              "F.25-34": 13, 
+              "F.35-44": 7, 
+              "M.45-54": 4, 
+              "F.55+": 3, 
+              "F.18-24": 3, 
+              "M.55+": 2, 
+              "M.18-24": 2, 
+              "U.UNKNOWN": 1, 
+              "U.25-34": 1, 
+              "F.45-54": 1, 
+              "M.13-17": 1
+            }, 
+            "end_time": "2011-12-10T08:00:00+0000"
+          }, 
+          {
+            "value": {
+              "M.25-34": 31, 
+              "M.35-44": 14, 
+              "F.25-34": 13, 
+              "F.35-44": 7, 
+              "M.45-54": 4, 
+              "F.55+": 3, 
+              "F.18-24": 3, 
+              "M.55+": 2, 
+              "M.18-24": 2, 
+              "U.UNKNOWN": 1, 
+              "U.25-34": 1, 
+              "F.45-54": 1, 
+              "M.13-17": 1
+            }, 
+            "end_time": "2011-12-11T08:00:00+0000"
+          }
+        ], 
+        "description": "Lifetime Aggregated demographic data about the people who like your Page based on the age and gender information they provide in their user profiles. (Total Count)"
+      }
+    ], 
+    "paging": {
+      "previous": "https://graph.facebook.com/110297092351369/insights/page_fans_gender_age?format=json&since=1323115058&until=1323374258", 
+      "next": "https://graph.facebook.com/110297092351369/insights/page_fans_gender_age?format=json&since=1323633458&until=1323892658"
+    }
+}
+
+var page_fans_gender = function (data){
+
+	/**
+	NOTE: if trannies is so small as to be insignificant, don't report it!
+	**/
+	
+	this.data = data.data[0].values[0].value
+	this.total = this.data.M + this.data.F + (this.data.U ? this.data.U : 0)
+	this.circle = new Path.Circle(view.center.add([-200,0]), 200);
+	this.circle.strokeColor = 'red';
+	this.circum = this.circle.length
+	,	this.Mr = this.data.M / this.total
+	,	this.Ms = this.data.F / this.total
+	,	this.trannies = (this.data.U ? this.data.U : 0) / this.total;	
+	var males = new Path();
+		males.add(this.circle.position);
+		males.lineTo(this.circle.getPointAt(0))
+		;males.arcTo(this.circle.getPointAt(1),this.circle.getPointAt(this.Mr * this.circum));
+		males.closePath();
+		males.strokeWidth=3;
+		males.strokeColor='blue';
+		males.fillColor = new HSBColor(220,.6,1,1)
+	var femmes = new Path()
+		femmes.add(this.circle.position);
+		femmes.lineTo(this.circle.getPointAt( this.Mr * this.circum ));
+		femmes.arcTo(this.circle.getPointAt((this.Mr * this.circum) + 1 ),this.circle.getPointAt(this.Mr * this.circum + (this.Ms * this.circum)));
+		femmes.closePath();
+		femmes.strokeWidth=3;
+		femmes.strokeColor='red'; // stroke dah femmes :D
+		femmes.fillColor = new HSBColor(340,.6,1,1	)
+	var trannies = new Path()
+		trannies.add(this.circle.position);
+		trannies.lineTo(this.circle.getPointAt( (this.Ms * this.circum )+(this.Mr * this.circum )));
+		trannies.arcTo(this.circle.getPointAt( (this.Ms * this.circum )+(this.Mr * this.circum ) + (this.trannies * 10) ),this.circle.getPointAt(0));
+//		trannies.closePath()
+    trannies.strokeWidth=3;
+		trannies.strokeColor='yellow'; // be careful!
+		trannies.fillColor = new HSBColor(88,.5,1,.5)
+}
+//var t = new page_fans_gender(data)
+
+var a = analytics = {};
+  a.init = function(){
+    paper.setup('canvas');
+    this.tool = new Tool();
+		this.tool.onMouseDrag = this.mouseDrag();
+	  this.tool.onMouseDown = this.mouseDown();
+		this.tool.onMouseUp = this.mouseUp();
+		this.tool.onMouseMove = this.mouseMove();
+		this.tool.activate();
+		this.tool.minDistance = 0;
+    this.tool.onMouseMove = this.mouseMove(this.events.hover)
+    return this
+  };
+  a.page_fans_gender_age = function(data, bigRadius){
+        var data = data.data[0].values[0].value;   
+        var radii = 0;   
+        var bigR = bigRadius;
+        var area = Math.PI*Math.pow(bigR,2);
+        var Likes = _.reduce(Object.keys(data), function(memo, val){
+      	  return memo + data[val]
+      	}, 0);
+      	
+      	var d = {};
+      	d.data = data;
+      	d.demo13 = {
+      	  'M.13-17' : data['M.13-17'] || 0,
+      	  'F.13-17' : data['F.13-17'] || 0,
+      	  'U.13-17' : data['U.13-17'] || 0
+      	};
+      	d.demo18 = {
+      	  'M.18-24' : data['M.18-24'] || 0,
+      	  'F.18-24' : data['F.18-24'] || 0,
+      	  'U.18-24' : data['U.18-24'] || 0
+      	};
+      	d.demo25 = {
+      	  'M.25-34' : data['M.25-34'] || 0,
+      	  'F.25-34' : data['F.25-34'] || 0,
+      	  'U.25-34' : data['U.25-34'] || 0
+      	};
+      	d.demo35 = {
+      	  'M.35-44' : data['M.35-44'] || 0,
+      	  'F.25-34' : data['F.25-34'] || 0,
+      	  'U.25-34' : data['U.25-34'] || 0
+      	};
+      	d.demo45 = {
+      	  'M.45-54' : data['M.45-54'] || 0,
+      	  'F.45-54' : data['F.45-54'] || 0,
+      	  'U.45-54' : data['U.45-54'] || 0
+      	};
+      	d.demo55 = {
+      	  'M.55+' : data['M.55+'] || 0,
+      	  'F.55+' : data['F.55+'] || 0,
+      	  'U.55+' : data['U.55+'] || 0
+      	};
+    var stroke = new HSLColor(1,0,.4)
+  
+    var ageSexCheck = function(order, prev){
+
+      	var layer = new Layer()
+      	var data = order.splice(0,1)[0][1];
+
+      	// totals by gender:
+  	
+      	var total = _.reduce(Object.keys(data), function(memo, val){
+      	  return memo + data[val]
+      	}, 0);
+      	
+      	var perecentOfLikes = total / Likes;
+      	      	
+      	var radius = Math.sqrt((area*perecentOfLikes)/Math.PI);
+      	      	
+      	var males = _.reduce(Object.keys(data), function(memo, val){
+      	  if(val[0].toLowerCase() === 'm') return memo + data[val];
+      	  else return memo + 0;
+      	},0);
+      	var femmes = _.reduce(Object.keys(data), function(memo, val){
+      	  if(val[0].toLowerCase() === 'f') return memo + data[val];
+      	  else return memo + 0;
+      	},0);
+      	var trannies = _.reduce(Object.keys(data), function(memo, val){
+      	  if(val[0].toLowerCase() === 'u') return memo + data[val];
+      	  else return memo + 0;
+      	},0)
+  	
+      	// precentages of total by gender:
+  	
+      	var Mr = males / total;
+      	var Ms = femmes / total;
+      	var trans = trannies ? trannies / total : 0;
+  	  	
+      	// invisible circle
+  	    if(total < 5) return;
+  	  	radii += ((prev||0)) + radius + 16;
+
+      	var circle = new Path.Circle(view.bounds.leftCenter.add([210 + radii,bigR-radius]), radius);
+      	var circum = circle.length;
+    
+      	// pie
+  	
+      		var males = new Path();
+        		males.add(circle.position);
+        		males.lineTo(circle.getPointAt(0));
+        		males.arcTo(circle.getPointAt(10),circle.getPointAt(Mr * circum));
+        		males.closePath();
+        		males.strokeWidth=2;
+        		males.strokeColor=stroke;
+        		males.fillColor = new HSBColor(220,.6,1,1)
+        	var femmes = new Path()
+        		femmes.add(circle.position);
+        		femmes.lineTo(circle.getPointAt( Mr * circum ));
+        		femmes.arcTo(circle.getPointAt((Mr * circum) + 10 ),circle.getPointAt((Mr + Ms) * circum));
+        		femmes.closePath();
+        		femmes.strokeWidth=2;
+        		femmes.strokeColor=stroke; 
+        		femmes.fillColor = new HSBColor(340,.6,1,1	)
+        	if(true){
+        	  	var trannies = new Path()
+            		trannies.add(circle.position);
+            		trannies.lineTo(circle.getPointAt( (Ms + Mr )*(circum)));
+            		trannies.arcTo(circle.getPointAt( ((Ms + Mr) * circum) + (trans * 10) ),circle.getPointAt(0));
+            		trannies.closePath()
+                trannies.strokeWidth=2;
+            		trannies.strokeColor=stroke;
+            		trannies.fillColor = new HSBColor(110,.5,1,1); 
+        	};
+        	if(order.length) {
+        	  ageSexCheck(order,radius);
+        	  layer.rotate(177);
+        	  view.draw();
+        	}
+        	else return;      	  
+    };    
+    
+    var order = _.map(d, function(data,key){
+      var total = _.reduce(Object.keys(data), function(memo, val){
+    	  return memo + data[val]
+    	}, 0);
+    	return [total,data]
+    }).sort(function (a,b){
+        return b[0] - a[0];
+        })
+    ageSexCheck(order)
+  }
+
+   a.events = {
+      hover: function(event){
+        var hit = project.hitTest(event.point, {tolerance: 10, type: 'PathItem', stroke:true, segments: true})
+        if (hit && hit.item.selectable){
+          if (this.text){this.text.remove();}
+          this.text = new PointText();
+          this.text.fillColor = 'yellow';
+          this.text.fontSize = 12;
+          this.text.position = event.point
+          this.text.content = hit.item.data
+        }
+        if(hit && !hit.item.selectable && this.text){this.text.remove();}
+        if(!hit && this.text){this.text.remove();}
+      }
+    };
+    a.mouseMove = function(){
+      var guments = arguments;
+      return function(event){        
+        for (var i = 0; i<guments.length;++i)
+        {
+          guments[i].call(timeline, event) 
+        }
+      }
+    };
+    a.mouseDown = function(){
+      var guments = arguments;
+      return function(event){        
+        for (var i = 0; i<guments.length;++i)
+        {
+          guments[i].call(timeline, event) 
+        }
+      }
+    };
+    a.mouseUp = function(event){
+      var guments = arguments;
+      return function(event){  
+        for (var i = 0; i<guments.length;++i){
+          guments[i].call(timeline, event) 
+        }
+      }
+    };
+    a.mouseDrag = function(event){
+      var guments = arguments;
+      return function(event){  
+        for (var i = 0; i<guments.length;++i){
+          guments[i].call(timeline, event) 
+        }
+      }
+    };
+    a.keyDown = function(event){
+      var guments = arguments;
+      return function(event){  
+        for (var i = 0; i<guments.length;++i){
+          guments[i].call(timeline, event) 
+        }
+      }
+    };
+    a.keyUp = function(event){
+      var guments = arguments;
+      return function(event){  
+        for (var i = 0; i<guments.length;++i){
+          guments[i].call(timeline, event) 
+        }
+      }
+    };
+
+
+a.init().page_fans_gender_age(data,100)
+
+};
+	</script>
+  <style>
+  body, canvas, .canvas{
+    background:#999;
+    cursor: crosshair;
+  }
+  ul {list-style-type:none;display:none;}
+  #box{
+    z-index:3;
+    background:red;
+    height:76px;
+    width:300px;
+    display:none;
+    position:absolute;
+    top:10px;
+  }
+  #controls{
+    width:100%;
+    height:40px;
+    position:fixed;
+    bottom:0;
+    left:0;
+    background:#c1c2c3;
+    z-index:1000;
+    text-align:center;
+  }
+  #options{
+    height:100%;
+    width:40px;
+    position:fixed;
+    top:0;
+    left:0;
+    background:#c1c2c3;
+    z-index:1000;
+    text-align:left;
+  }
+  #tools a{
+    font-size:20px;
+    margin: 0 30px
+  }
+  </style>
+
+</head>
+<body>
+	<canvas id="canvas" resize style="background:white"></canvas>
+</body>
+</html>

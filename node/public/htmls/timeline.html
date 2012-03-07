@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<title>HYFN8</title>
+	<script type="text/javascript" src="./media/js/libs/paper.js"></script>
+	<script type="text/javascript" src="./media/js/libs/underscore-min.js"></script>
+	<script type="text/javascript" src="./media/js/libs/store.js"></script>
+	<script type="text/javascript" src="./media/js/libs/date.js"></script>
+	<style>
+  body, canvas{
+    background:#999;
+    cursor: crosshair;
+  }
+  #canvas {
+
+  }
+  </style>
+	<script type="text/javascript">
+paper.install(window);
+window.onload = function(){
+function fakeIt (){
+  var data = [];
+  this.fromTo = function(from, to){
+      return Math.floor(Math.random() * (to - from + 1) + from);
+  };
+  this.dateMap = function (d){
+      return Date.today().addDays(-d).toString().slice(0, -23)
+  };
+  for(x = 0; x<=6; ++x){
+    data.push({
+      date: this.dateMap(x), 
+      retweets: this.fromTo(data.length ? data[data.length - 1].retweets - 5000 : 100000, data.length ? data[data.length - 1].retweets + 10000 : 100000),
+      likes: this.fromTo(data[data.length - 1] ? data[data.length - 1].likes - 5000 : 100000 , data[data.length - 1] ? data[data.length - 1].likes + 10000 : 100000)})
+  }
+  
+  var total = _.map(data, function(v){
+    var total = (v.likes + v.retweets);
+    console.log(total)
+    return total
+  })
+
+  data.max = _.max(total);
+  data.min = _.min(total);
+  console.log(data.min, data.max)
+  
+  return data
+};
+var timeline = Object.create(null);
+
+  timeline = {
+    dateMap: function (d){
+      return Date.today().addDays(-d).toString().slice(0, -23)
+    },
+    options: {
+      gutter: {
+        top: 13,
+        bottom: 13,
+        left: 13,
+        right: 13
+      },
+      width: 726,
+      hieght: 226
+    },
+    init: function(opts){
+        paper.setup('canvas');
+        view.viewSize = [opts.w,opts.h];
+        this.options.gutter = opts.gutter;
+        this.data = fakeIt();
+        //this.draw();
+        this.frame(view.bounds);
+        var range = (this.data.max) - (this.data.min);
+        this.ratio(view.bounds, this.options.gutter, this.data.length -1, range)
+        this.yCoord(view.bounds, this.options.gutter, this.data.length -1, this.data);
+        this.grid(view.bounds, this.options.gutter, this.data.length -1, range);
+        this.plot(this.gridBox.bounds, this.data, 210)
+//        this.plot(this.gridBox.bounds, fakeIt(), 110)
+  //      this.plot(this.gridBox.bounds,fakeIt(), 10)
+
+        this.tool = new Tool();
+  			this.tool.onMouseDrag = this.mouseDrag();
+  		  this.tool.onMouseDown = this.mouseDown();
+  			this.tool.onMouseUp = this.mouseUp();
+  			this.tool.onMouseMove = this.mouseMove();
+  			this.tool.activate();
+  			this.tool.minDistance = 0;
+        this.tool.onMouseMove = this.mouseMove(this.events.hover)
+        view.draw();
+      },
+      ratio: function(bounds, gutter, days, range){
+        var xInt = (bounds.width)/(days) // = 100
+        ,   yInt = ((bounds.height)/range) * 1000 // = 10
+        ,   yRatio = (bounds.height)/range; // = 1 (200:200)
+        this.xInt = xInt;
+        this.yInt = yInt;
+        this.yRatio = yRatio;
+      },
+      frame: function(bounds){
+        //frame is total w, h of canvas
+        var frame = new Path.RoundRectangle(bounds,11);
+        frame.fillColor = new HSLColor(210, 0, .33, 1)
+        frame.strokeColor = 'black'
+        this.frame = frame;
+      },
+      yCoord: function(bounds, gutter, days, data){
+        
+        var point = new Point(bounds.topLeft.x + 5, bounds.topLeft.y + gutter.top);
+        var size = new Size(50, bounds.height - (gutter.top + gutter.bottom))
+        var tangle = new Rectangle(point, size)
+        var rect = new Path.RoundRectangle(tangle, 5)
+
+        /*
+        var xInt = (bounds.width)/(days) // = 100
+        ,   yInt = ((bounds.height)/range) // = 10
+        ,   yRatio = (bounds.height)/range; // = 1 (200:200)
+        console.log('yInt', yInt)
+        */
+        var range = data.max - data.min;
+        var inter = range / 4;
+
+        var nums = function (data){
+          
+          Number.prototype.toNearest = function(num) { // num is an exponent of 10
+          return Math.round(this/num)*num;
+          }
+          
+          var range = data.max - data.min;
+          var inter = range / 5;
+          var nuts = [];
+          for (x = 1; x < 6; ++x){
+            nuts.push((data.min + (inter * x)).toNearest(10))
+          }
+          return nuts
+        };
+        console.log(nums(data))
+        for(x = 1; x < 5; ++x){
+          var txt = new PointText();
+          txt.position = [rect.bounds.left + 5, rect.bounds.bottom - (rect.bounds.height / 5 * x)];
+          txt.content = Math.round(data.min + (x * inter)) + ' --';
+          txt.fillColor = '#ccc'; 
+        }
+      },
+      grid: function(bounds, gutter, days, range, yMin, yMax){
+        // set up grid rectangle
+        var point = new Point(bounds.topLeft.x + gutter.left, bounds.topLeft.y + gutter.top);
+        var size = new Size(bounds.width - (gutter.left + gutter.right), bounds.height - (gutter.top + gutter.bottom))
+        var tangle = new Rectangle(point, size)
+        var rect = new Path.RoundRectangle(tangle, 5)
+        rect.fillColor = 'black';
+        rect.strokeColor = '#fff'
+        this.gridBox = rect;
+        bounds = rect.bounds;
+        
+        var xInt = (bounds.width)/(days) // = 100
+        ,   yInt = ((bounds.height)/range) * 1000 // = 10
+        ,   yRatio = (bounds.height)/range; // = 1 (200:200)
+        this.xInt = xInt;
+        this.yInt = yInt;
+        this.yRatio = yRatio
+        /*
+        for(x = 0;x <= bounds.height - (yInt/4) ; x += yInt){ // draw y gridlines
+          var path = new Path();
+          path.strokeColor = new HSLColor(120, .5, 1, .2);
+          path.add(bounds.left, bounds.bottom - x);
+          path.add(bounds.right, bounds.bottom - x);
+        }/*
+        for(x = 0;x <= bounds.width; x += yInt){
+          var path2 = new Path();
+          path2.strokeColor = new HSLColor(120, .5, 1, .2);
+          path2.add(bounds.left + (x), bounds.bottom);
+          path2.add(bounds.left + (x), bounds.top);
+        }
+        for(x = days;x >= 0; --x){ // draw x-lines
+          var path = new Path();
+          path.date = timeline.dateMap(days - x);
+         //path.selectable = true;
+          path.strokeColor = new HSLColor(120, .5, 1, .4);
+          path.add(bounds.left + (xInt * x), bounds.bottom);
+          path.add(bounds.left + (xInt * x), bounds.top);
+        }*/
+      },
+      plot: function (bounds, data, hue){
+        var graf = new Path();
+        console.log(bounds)
+        graf.strokeColor = new HSBColor(270,1,1,1);
+        graf.strokeWidth = 2;
+        data.forEach(function(e,x){
+          var point = [(x * timeline.xInt) + bounds.left, bounds.bottom - (bounds.height * (((e.retweets + e.likes) - data.min) / (data.max - data.min))) ]
+          graf.add(point)
+          var c = new Path.Circle(point, 3)
+          c.fillColor = new HSLColor(hue,1,.5,1);
+          c.strokeWidth = 2;
+          c.strokeColor ='#000';
+          c.data = (e.retweets + e.likes);
+          c.selectable = true
+        })
+      },
+    events: {
+      hover: function(event){
+        var hit = project.hitTest(event.point, {tolerance: 10, type: 'PathItem', stroke:true, segments: true})
+        if (hit && hit.item.selectable){
+          if (this.text){this.text.remove();}
+          this.text = new PointText();
+          this.text.fillColor = 'yellow';
+          this.text.fontSize = 12;
+          this.text.position = event.point
+          this.text.content = hit.item.data
+        }
+        if(hit && !hit.item.selectable && this.text){this.text.remove();}
+        if(!hit && this.text){this.text.remove();}
+      }
+    },
+    mouseMove:function(){
+      var guments = arguments;
+      return function(event){        
+        for (var i = 0; i<guments.length;++i)
+        {
+          guments[i].call(timeline, event) 
+        }
+      }
+    },
+    mouseDown:function(){
+      var guments = arguments;
+      return function(event){        
+        for (var i = 0; i<guments.length;++i)
+        {
+          guments[i].call(timeline, event) 
+        }
+      }
+    },
+    mouseUp:function(event){
+      var guments = arguments;
+      return function(event){  
+        for (var i = 0; i<guments.length;++i){
+          guments[i].call(timeline, event) 
+        }
+      }
+    },
+    mouseDrag:function(event){
+      var guments = arguments;
+      return function(event){  
+        for (var i = 0; i<guments.length;++i){
+          guments[i].call(timeline, event) 
+        }
+      }
+    },
+    keyDown: function(event){
+      var guments = arguments;
+      return function(event){  
+        for (var i = 0; i<guments.length;++i){
+          guments[i].call(timeline, event) 
+        }
+      }
+    },
+    keyUp:   function(event){
+      var guments = arguments;
+      return function(event){  
+        for (var i = 0; i<guments.length;++i){
+          guments[i].call(timeline, event) 
+        }
+      }
+    }
+  }
+  timeline.init({w: 1200,h: 400, gutter: {top:30, bottom:30, right:30, left:60}})
+  
+
+}
+	</script>
+
+</head>
+<body>
+    <canvas id="canvas" style="background:transparent"></canvas>
+</body>
+</html>

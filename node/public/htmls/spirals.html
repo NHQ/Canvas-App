@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<title>HSLColor</title>
+	<script type="text/javascript" src="../javascripts/paper.js"></script>
+	<script type="text/javascript" src="../javascripts/underscore-min.js"></script>
+	<script type="text/javascript" src="../javascripts/store.js"></script>
+	<script type="text/javascript">
+paper.install(window);
+window.onload = function(){
+colz = store.get('colors');
+sinceLast = new Date().getTime(); 
+paper.setup('canvas');
+center = view.center;
+
+// notes: smudge draw. user holds down to "soak" up color alpha, and then as they drag, the alpha decerases until gone. 
+  
+
+  gg = {
+    init: function(){
+      _.bindAll(this);
+      this.groupAll = new Group();
+      this.globs = Object.create(null);
+			this.tool = new Tool();
+			this.tool.onMouseDrag = this.mouseDrag();
+			this.tool.onMouseDown = this.mouseDown(this.events.select);
+			this.tool.onMouseUp = this.mouseUp();
+			this.tool.activate();
+			this.spirals(view.center);
+			this.spirals2(view.center.subtract([200,0]));
+			this.spirals2(view.center.subtract([-200,0]));
+			view.draw()
+    },
+    globs:{},
+    target: {
+      setItem: function(item){
+        console.log(this)
+        var i = this.target.item || null;
+        console.log(i,'\n', item)
+        if(i){
+          if(item._id != i._id)
+          i.selected = false;
+        //  gg.globs.selectRect.remove();
+        //  gg.globs.selectDot.remove();
+          view.draw();
+        }
+        item.selected = true;
+        this.target.item = item;
+/*      
+        this.globs.selectRect = new Path.Rectangle(item.bounds)
+        this.globs.selectRect.insertBelow(item);
+        this.globs.selectRect.selectable = false;
+        this.globs.selectRect.style = {
+        strokeColor : new HSBColor(210,1,1,.2)       
+        };
+        this.globs.selectDot = new Path.Circle(item.position, 3);
+        this.globs.selectDot.insertBelow(item);
+        this.globs.selectDot.style = {
+          fillColor: '#000',
+          strokeWidth: 0
+        }
+*/ 
+      },
+      setSegment: function(item){
+        this.target.segment = item;
+      }
+    },
+    events: {
+      select: function(event){
+          var hit = project.hitTest(event.point, {tolerance: 10, fill: true, stroke:true, segments: true})
+          if (hit && hit.item.selectable){
+            /* clear all selected
+            _.each(project.layers, function(lay){
+              _.each(lay.children, function(chi){
+                chi.selected = false;
+              })
+            })
+            this.funs.deSelect.apply(this);
+            *///select new
+            //if(this.target.item && this.target.item._id != hit.item._id){console.log('hair');this.target.item.selected = false}
+            this.target.setItem.apply(this, [hit.item]);
+            //this.funs.select.apply(this, [hit.item, true])
+            this.tool.onMouseDown = this.mouseDown(this.events.grabSegment, this.events.select);
+            //this.tool.onMouseUp = this.mouseUp(this.events.grabSegment, this.events.select);
+            // need to function this mouseDown to target item's parts for drag, while also keep item selection on ...
+            //hit.segment.point = new Point([0,0])
+          }
+          else {
+            console.log('miss')
+            _.each(project.layers, function(lay){
+              _.each(lay.children, function(chi){
+                chi.selected = false;
+              })
+            })
+            //this.funs.deSelect.apply(this);
+            this.tool.onMouseDown = this.mouseDown(this.events.select);
+            this.tool.onMouseDrag = this.mouseDown();
+          }
+        },
+        grabSegment: function(event){
+          var hit = project.hitTest(event.point, {tolerance: 30, segments: true})
+          if(hit && hit.segment && hit.item.selectable){
+            this.target.setSegment.apply(this, [hit.segment]);
+            this.tool.onMouseDrag = this.mouseDrag(this.events.dragSegment)
+            this.tool.onMouseUp = this.mouseUp(this.events.dropSegment)
+          }
+          else this.tool.onMouseDrag = this.mouseDrag();
+        },
+        dragSegment: function(event){
+          this.target.segment.point = event.point;
+        //  this.target.item.smooth();
+        //  this.tool.onMouseDown = this.mouseDown(this.events.grabSegment, this.events.select);
+        },
+        dropSegment: function(event){
+          this.tool.onMouseDrag = this.mouseDrag();
+          this.tool.onMouseDown = this.mouseDown(this.events.grabSegment, this.events.select);
+        },
+        selected: function(event){
+          var hit = project.hitTest(event.point, {tolerance: 50, segments: true})
+          if(hit && hit.segment){
+            hit.segment.point = event.point
+          }
+        }
+    },
+    funs: {
+      select: function(item, fully){
+        if(_.contains(this.globs, item)){return}
+        this.globs.selectRect = new Path.Rectangle(item.bounds);
+        // this.globs.selectRect.selectable = false;
+        this.globs.selectRect.style = {
+          strokeColor : new HSBColor(210,1,1,.2)
+        };
+        this.globs.selectDot = new Path.Circle(item.position, 3);
+        this.globs.selectDot.style = {
+          fillColor: '#000',
+          strokeWidth: 0
+        };
+        item.selected = fully;
+      },
+      deSelect: function(item){
+        this.globs.selectRect.remove();
+        this.globs.selectDot.remove();
+        view.draw();
+        //item.selected = false
+      },
+      dot: function(){
+        console.log(arguments)
+        for (i in arguments){
+          var dot = new Path.Circle(arguments[i], 3);
+          dot.style = {
+            fillColor: '#000',
+            strokeWidth: 0
+          } 
+        }
+      }
+    },
+    remove:function(){
+      this.layer.remove();
+    },
+    mouseDown:function(){
+      var guments = arguments;
+      return function(event){        
+        for (var i = 0; i<guments.length;++i){
+          guments[i].call(gg, event) 
+        }
+      }
+    },
+    mouseUp:function(event){
+      var guments = arguments;
+      return function(event){  
+        for (var i = 0; i<guments.length;++i){
+          guments[i].call(gg, event) 
+        }
+      }
+    },
+    mouseDrag:function(event){
+      var guments = arguments;
+      return function(event){  
+        for (var i = 0; i<guments.length;++i){
+          guments[i].call(gg, event) 
+        }
+      }
+    },
+    spirals: function(c){
+      _.bindAll(this);
+      var layer = new Layer(), r = 100
+      var container = new Path.Circle(c, r)
+      container.style = {
+        fillColor: '#fff',
+        strokeColor: new HSBColor(1,1,0,.5),
+        strokeWidth: 1,
+        dashArray: [10,4]
+      }
+      var pvector = new Point({angle: 0, length: r}), qvector = new Point({angle:42, length: r});
+      var p = c.add(pvector), q = c.add(qvector),
+          pc = c.subtract(p), qc = c.subtract(q),
+          t = c;
+                
+      var stopper = 1;
+      var cooler = new HSBColor(0,1,1,.2);
+      function spirate (p,q,t){
+        if (stopper > 3){return}
+        ++stopper;
+        var arc = new Path.Arc(p,t,q);
+        arc.style = {
+          strokeColor: cooler,
+          strokeWidth: 1,
+          dashArray: [10,4]
+        };
+        qvector.angle += 42;
+        p = q, q = t.add(qvector)
+        spirate(p,q,t);
+       } spirate(p,q,t) 
+    },
+    spirals2: function(c){
+      _.bindAll(this);
+      var layer = new Layer(), r = 200
+      var container = new Path.Circle(c, r)
+      container.style = {
+        fillColor: '#fff',
+        strokeColor: new HSBColor(1,1,0,.5),
+        strokeWidth: 1,
+        dashArray: [10,4]
+      }
+              var gradient = new Gradient([['black'],['orange',.2],['yellow',.5],[new HSBColor(240,.7,1,.5),.9]], 'radial');
+              var gcolor = new GradientColor(gradient, c, c.add([0,100]))                                                                                                             
+      
+      var pvector = new Point({angle: 0, length: r}), qvector = new Point({angle:0, length: r+30});
+      var p = c.add(pvector), q = c.add(qvector),
+          pc = c.subtract(p), qc = c.subtract(q),
+          tvector = new Point({angle:21, length:50}), t = c.add(tvector);
+                
+      var stopper = 1;
+      var cooler = new HSBColor(300,1,1,.2);
+      function spirate (p,q,t){
+        var g = q, j = p, f = t;
+        if (stopper > 80){return}
+        ++stopper;
+        var arc = new Path.Arc(p,t,q);
+        arc.style = {
+          strokeColor: gcolor,
+          strokeWidth: 1,
+          dashArray: [4,4]
+        };
+        //qvector.angle += 42;
+        //qvector.length += 10;
+        console.log(qvector.length);
+        tvector.angle += 42;
+        pvector.angle += 42;
+        ty = t.subtract(j);
+        ty.angle += 97;
+        t = q.add(ty);  
+        p = g; 
+        py = q.subtract(j);
+        py.angle += 97;
+        q = q.add(py);
+        spirate(p,q,t);
+       } spirate(p,q,t) 
+    }
+  }
+  gg.init();
+};
+
+	</script>
+  <style>
+  body, canvas, .canvas{
+    background:#fff;
+    cursor: crosshair;
+  }
+  #box{
+    z-index:3;
+    background:red;
+    height:76px;
+    width:300px;
+    display:none;
+    position:absolute;
+    top:10px;
+  }
+  #tools{
+    width:100%;
+    height:40px;
+    position:fixed;
+    bottom:0;
+    left:0;
+    background:#c1c2c3;
+    z-index:1000;
+    text-align:center;
+  }
+  #tools a{
+    font-size:20px;
+    margin: 0 30px
+  }
+  </style>
+
+</head>
+<body>
+	<canvas id="canvas" resize style="background:white"></canvas>
+  <div id="box"></div>
+</body>
+	<script type="text/javascript">
+var dropzone = document.getElementById('tools');
+dropzone.ondragover = function () { this.className = 'hover'; return false; };
+dropzone.ondragend = function () { this.className = ''; return false; };
+dropzone.ondrop = function (e){
+    ees = e;
+    files = e.dataTransfer.files,
+    file = files[0];
+    reader = new FileReader();        
+    reader.onload = function (event) {
+      even = event;
+      console.log(event.target.result);
+      var img = document.createElement('img');
+      img.src=event.target.result;
+      img.id = 'raster';
+      img.style.zIndex = 9000;
+      var cvas = document. getElementById('canvas');
+      document.body.insertBefore(img, cvas );
+      var raster = new Raster('raster')
+      view.draw()
+    };
+    reader.readAsDataURL(files[0])
+    //console.log(t.result);
+    return false;
+};
+	</script>
+<script type="text/javascript">
+if ('standalone' in navigator && !navigator.standalone && (/iphone|ipod|ipad/gi).test(navigator.platform) && (/Safari/i).test(navigator.appVersion)) {
+	document.write('<link rel="stylesheet" href="../stylesheets/add2home.css">');
+	document.write('<script type="application/javascript" src="../javascripts/add2home.js"><\/s' + 'cript>');
+}
+</script>
+</html>

@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<title>HSLColor</title>
+	<script type="text/javascript" src="../javascripts/paper.js"></script>
+	<script type="text/javascript" src="../javascripts/underscore-min.js"></script>
+	<script type="text/javascript" src="../javascripts/store.js"></script>
+	<script type="text/javascript">
+paper.install(window);
+window.onload = function(){
+colz = store.get('colors');
+sinceLast = new Date().getTime(); 
+paper.setup('canvas');
+center = view.center;
+
+// notes: smudge draw. user holds down to "soak" up color alpha, and then as they drag, the alpha decerases until gone. 
+  
+	globs = {
+	  color: new HSBColor(1,1,0,1),
+	  active: {},
+	  last: function(){
+	    this.active.init(true, false);
+	  }
+	};
+  init = {
+    init: function(){
+      this.tool = new Tool();
+      this.tool.onMouseDown = this.mouseDown; 
+    },
+    mouseDown: function(event){
+    }
+  }
+  menu = {
+    init: function(){
+      //var side = side || 'top';
+      this.bar();
+     // _.bindAll(this);
+
+			view.draw()
+    },
+    bar: function(){
+      //this.group = new Group();
+      var styles = function (fill){
+        var style = {};
+        if (fill){
+          var origin = this.bounds.bottomLeft;
+          var end = this.bounds.bottomRight;
+          var gradient = new Gradient(['black','white'])
+          var gColor = new GradientColor(gradient, origin, end) 
+        }
+        style.fillColor = fill ? gColor : null;
+        style.strokeColor = '#000';
+        style.strokeWidth = 1;
+        return style
+      };
+  // lines and arcs
+      var line = new Path([[5,5],[55,35]]);
+          line.style = new styles(false);
+      var arc = new Path.Arc(new Point(5,55), new Point(40, 40), new Point(55,55));
+          arc.style = styles.apply(arc, [false]);
+  // polygons
+      var triangle = new Path.RegularPolygon([25, 90], 3, 25);
+          triangle.style = styles.apply(triangle, [true])
+      var sqr = new Path.Rectangle([25,90],[30,30]);
+          sqr.style = styles.apply(sqr, [true])
+  // circles
+      var circle = new Path.Circle([25,155], 23)
+          circle.style = styles.apply(circle, [true])
+  // starts!
+  var burble = new Path.RegularPolygon(view.center,7,50 );
+                          //burble.strokeJoin = 'bevel';
+                                  _.each(burble.curves, function(curve, index){
+                                          var midpoint = curve.segment2.point.subtract(curve.segment1.point);
+                                          midpoint.angle -= 90;
+                  curve.handle1 = midpoint.normalize(100); // the normalize is the variable w/ radius
+                                          curve.handle2 = midpoint.normalize(100);
+                          })
+                                  burble.style = styles.apply(burble, [true])
+              var star = new Path.RegularPolygon([35, 230],10,25)
+                  _.each(star.segments, function(seg, index){
+                    if (index%2) {var vector = new Point([35,230]).subtract(seg.point)
+                     seg.point = seg.point.add(vector.normalize(15))}
+                    else {
+                      return
+                    }
+                   // vector.angle += 360/10
+                  })
+                  star.style = styles.apply(star, [false])
+//      var rectagon = new Path.Rectangle();
+//	    var circle = new Path.Circle();
+//	    var square = new Path.Rectangle;
+//	    var roundedRect = new Path.RoundRectangle();
+//	    var polygon = new Path.RegularPolygon();
+//	    var star = new Path.RegularPolygon() // + segment manipulating, every other, vector = center
+    },
+    remove:function(){
+      //this.layer.remove();
+    },
+    mouseDown:function(event){
+      
+    },
+    mouseDrag:function(event){
+      
+    },
+    mouseUp:function(event){
+      
+    }
+  };
+	shapes = {
+	  init:function(){
+	    this.Selector();
+			_.bindAll(shapes);
+			this.tool = new Tool();
+			this.tool.onMouseDown = this.mouseDown;
+			this.tool.onMouseDrag = this.mouseDrag;
+			this.tool.onMouseUp = this.mouseUp;
+			this.tool.activate();
+			this.pallette.store();
+			view.draw()
+	  },
+	  Selector: function(){
+	    this.group = new Group();
+	    var rectagon = new Path.Rectangle();
+	    var circle = new Path.Circle();
+	    var square = new Path.Rectangle;
+	    var roundedRect = new Path.RoundRectangle();
+	    var polygon = new Path.RegularPolygon();
+	    var arc = new Path.Arc();
+	    var star = new Path.RegularPolygon() // + segment manipulating, every other, vector = center
+	  }
+	};
+	draw = {
+		init: function(){
+		  globs.active = this;
+			_.bindAll(draw);
+			this.tool = new Tool();
+			this.tool.onMouseDrag = this.mouseDrag;
+			this.tool.onMouseUp = this.mouseUp;
+			this.tool.onMouseDown = this.mouseDown;
+			this.tool.activate();
+			//this.pallette.store();
+			view.draw()
+		},
+		mouseDown: function(event){
+      if(project.hitTest(event.point, {fill:true, stroke:true, segment: true})){
+        var hit = project.hitTest(event.point, {fill:true, stroke:true});
+        _.each(project.layers , function(lay){_.each(lay.children, function(child){child.selected = false})})
+        hit.item.selected = true
+  		  if (hit.type == 'segment'){
+  		    hit.item.segment.add([20,50])
+  		  }
+      }
+		  this.layer = new Layer();
+      this.path = new Path();
+      this.path.fillColor = colorPicker.pal;
+      this.path.strokeWidth = 5;
+      this.path.strokeCap = 'round';
+      this.path.strokeColor = '#000';
+		},		
+		mouseUp: function (event){
+		
+		},
+		mouseDrag : function (event) {
+
+      this.path.add(event.point);
+      //this.path.fillColor = colorPicker.pal
+		}
+	};
+	colorPicker = {
+  		init: function(){
+  			this.Selector();
+  			_.bindAll(colorPicker);
+  			this.tool = new Tool();
+  			this.tool.onMouseDrag = this.mouseDrag;
+  			this.tool.onMouseUp = this.mouseUp;
+  			this.tool.activate();
+  			this.pallette.store();
+  			view.draw()
+  		},
+  		pallette : {
+  		  store: function(){
+  		    var cors = store.get('colors');
+  		    poop = [];
+  		    _.each(cors, function(e){
+  		      var c = new HSBColor(e[0],e[1],e[2],e[3]);
+  		      poop.push(c);
+  		    })
+  		    this.get = poop;
+  		    this.set();
+  		  },
+  		  set: function(color){
+  		    if (color){
+  		      this.get.unshift(color);
+  		      store.set('colors', _.map(this.get, function(obj){
+  		        return [obj.hue, obj.saturation, obj.brightness, obj.alpha]
+  		      }));
+  		      this.set();
+  		      return		      		        
+  		      }
+  		    this.swathii.remove();
+  		    this.swathii = new Group();
+  		    this.swath = [];
+  		    var rad = 350;
+  		    var radian = 15;
+  		    if (this.get.length > 24){radian-=6}
+  		    for (var x = this.get.length; x >= 0; --x){
+  		      var unit = 360 / this.get.length;
+  		      vek = new Point({
+              angle: -(x * radian) - 5,
+              length: rad
+            })
+  		      console.log(vek.angle)
+  		      this.swath[x] = new Path.Circle(center.add(vek),45);
+  		      //this.swath[x].strokeColor = "#333";
+  		      this.swath[x].fillColor = this.get[x];
+  		      //this.swath[x].moveAbove(this.swath[x+1]);
+  		      this.swathii.addChild(this.swath[x])
+  		    }  
+  		    //this.swathii.position = [550,0]
+  		    },
+  		  get: [],
+  		  swathii: new Group(),
+  		  swath:[]
+  		},
+  		Selector : function(){
+  		  this.group = new Group();
+  			globs.color = this.pal =  new HSBColor(210, 1, 1);
+  			this.bg = [];
+  			for (i=35;i>0;--i){
+  				this.bg[i] = new Path([3,(i*10)],[358,0+(i*10)]);
+  				this.bg[i].strokeWidth = 5;
+  				this.bg[i].strokeColor = "#c1c2c3";
+  				this.group.addChild(this.bg[i])
+  			}
+  			this.sb = new Path.Circle(180, 180, 180);
+  			this.sb.fillColor = this.pal;
+  			this.circ = new Path.Circle(this.sb.position.x,this.sb.position.y,6);
+  			this.circ.strokeColor = "black";
+  			this.circ.strokeWidth = 3;
+  			var colors = [];
+  			var cycles = 4;
+  			for (var i = 0, l = 360; i < l; i++) {
+  				var brightness = 1;
+  				var hue = i;
+  				var color = new HSBColor(hue, 1, brightness);
+  				colors.push(color);
+  			}
+
+  			this.hueSelect = new Path.Rectangle(0,375,360,30);
+  			var gradient = new Gradient(colors);
+  			var gradientColor = new GradientColor(gradient, this.hueSelect.bounds.bottomLeft,this.hueSelect.bounds.bottomRight);
+  			this.hueSelect.fillColor = gradientColor;
+
+  			this.tiny = new Path.Circle([210, 390],3);
+  			this.tiny.fillColor= "white";
+  			this.tiny.strokeColor = "#000";
+
+  			this.as = new Path.Rectangle(375,-10,30,360);
+  			this.palAlpha1 = this.pal.clone();
+  			this.palAlphaZero = this.pal.clone();
+  			this.palAlphaZero.alpha = 0;
+  			var gradient = new Gradient([[this.palAlphaZero],[this.palAlpha1]]);
+  			var gradientColor = new GradientColor(gradient, this.as.bounds.topLeft,this.as.bounds.bottomLeft);
+  			this.as.fillColor = gradientColor;
+  			this.add = new PointText([367,410]);
+  			this.add.content= "+";
+  			this.add.characterStyle = {
+            fontSize: 60,
+        }
+        this.add.strokeJoin = 'round';
+  			this.add.fillColor = "#000";
+  			this.add.strokeColor = "#fff"
+
+  			this.addRect = new Path.Rectangle(new Point(367,365), new Size(48,48));
+  			//var cornerSize = new Size(20, 20);
+  			//this.addRect = new Path.RoundRectangle(aRex, cornerSize);
+
+  			this.addRect.strokeColor = "#fff";
+  			this.addRect.fillColor = "#fff";
+  			this.addRect.fillColor.alpha = 0;
+
+  			this.group.addChildren([this.as, this.sb, this.hueSelect, this.tiny, this.circ, this.add, this.addRect]);
+  			this.group.selected = false;
+  			this.group.position = view.center;
+
+
+
+  //			this.add = new Path([[25,25],[25,10],[35,10],[25,35]]);
+  		},
+  		remove: function(){
+  	    this.group.remove();
+  	    this.pallette.swathii.remove();
+  	  },
+  		mouseUp: function (event){
+  			/* If we produced a line before, deselect it:
+  			if (line) {
+  				line.selected = false;
+  			}
+  				// Create a new line and set its stroke color to black:
+  			line = new Path();
+  			line.add(event.point);
+  			line.strokeColor = pal.clone();
+  			line.strokeWidth = 7;
+  			*/
+  			if (this.sb.hitTest(event.point, {fill:true})){
+  				this.circ.position = event.point;
+  				var bright = (360 - Math.abs((event.point.x - this.sb.position.x)*2))/360;
+  				var sat = (360 - Math.abs((event.point.y - this.sb.position.y)*2))/360;;
+  				this.sb.fillColor.saturation = sat;
+  				this.sb.fillColor.brightness =  bright;
+  				globs.color = this.pal.brightness = bright;
+  				globs.color = this.pal.saturation = sat;
+  				this.palAlphaZero.saturation = sat;
+  				this.palAlphaZero.brightness = bright;
+  				this.palAlpha1.saturation = sat;
+  				this.palAlpha1.brightness = bright;
+  			}
+  			if (this.hueSelect.hitTest(event.point, {fill:true})){
+  				this.sb.fillColor = this.pal.clone();
+  				globs.color = this.pal.hue = (event.point.x - this.hueSelect.bounds.left);
+  				this.sb.fillColor.hue = (event.point.x - this.hueSelect.bounds.left);
+  				this.tiny.position.x = event.point.x
+  				this.palAlphaZero.hue = (event.point.x - this.hueSelect.bounds.left);
+  				this.palAlpha1.hue = (event.point.x - this.hueSelect.bounds.left);
+  			}
+  			if (this.as.hitTest(event.point, {fill:true})){
+  				globs.color = this.pal.alpha = (event.point.y - this.as.bounds.top) / 340;
+  				globs.color = this.sb.alpha = (event.point.y - this.sb.bounds.top) / 360;
+  			}
+  			if(this.addRect.hitTest(event.point, {fill:true})){
+  			  if( (new Date().getTime() - sinceLast) < 500){
+    		    return
+    		  }
+    		  sinceLast = new Date().getTime();
+  			  this.pallette.set(this.pal.clone());
+  			}
+  			if(this.pallette.swathii.hitTest(event.point, {fill:true})){
+  			  var item = this.pallette.swathii.hitTest(event.point, {fill:true}).item;
+  			 globs.color = colorPicker.pal = item.fillColor;
+  			 this.remove();
+  			 globs.last();
+  			 /*
+  			 this.pallette.swathii.strokeWidth=0;
+  			 this.pallette.swathii.strokeColor= new HSBColor(0,1,1,0);
+  			 item.strokeColor="#000";
+  			 item.strokeWidth=3;
+  			 item.dashArray = [11,5];
+  			 item.moveAbove(this.pallette.swath[item.index+1] || this.pallette.swath[item.index-1]);
+  			 document.getElementById('box').style.zIndex = 100;
+  			 document.getElementById('box').style.display = "block";
+  			  document.getElementById('box').style.top = item.position.y-30+"px";
+  			  document.getElementById('box').style.left = item.position.x+30+"px";
+  			 document.getElementById('box').innerHTML =  "CSS: "+this.pallette.swathii.hitTest(event.point, {fill:true}).item.fillColor.toCssString() +'<br />HSLa: '+ this.pallette.swathii.hitTest(event.point, {fill:true}).item.fillColor.toString();
+  			 //this.group.remove();
+  			 //this.pallette.swathii.remove();
+  			 */
+  			}
+  		},
+  		mouseDrag : function (event) {			
+  			// S/B
+  			if (this.hueSelect.hitTest(event.point, {fill:true})){
+  				this.sb.fillColor = this.pal.clone();
+  				this.pal.hue = (event.point.x - this.hueSelect.bounds.left);
+  				this.sb.fillColor.hue = (event.point.x - this.hueSelect.bounds.left);
+  				this.tiny.position.x = event.point.x
+  				this.palAlphaZero.hue = (event.point.x - this.hueSelect.bounds.left);
+  				this.palAlpha1.hue = (event.point.x - this.hueSelect.bounds.left);
+  			}
+  			if (this.as.hitTest(event.point, {fill:true})){
+  				this.pal.alpha = (event.point.y - this.as.bounds.top) / 340;
+  				this.sb.alpha = (event.point.y - this.sb.bounds.top) / 360;
+  			}
+  			if (this.sb.hitTest(event.point, {fill:true})){
+  				this.circ.position = event.point;
+  				var bright = (360 - Math.abs((event.point.x - this.sb.position.x)*2))/360;
+  				var sat = (360 - Math.abs((event.point.y - this.sb.position.y)*2))/360;;
+  				this.sb.fillColor.saturation = sat;
+  				this.sb.fillColor.brightness =  bright;
+  				this.pal.brightness = bright;
+  				this.pal.saturation = sat;
+  				this.palAlphaZero.saturation = sat;
+  				this.palAlphaZero.brightness = bright;
+  				this.palAlpha1.saturation = sat;
+  				this.palAlpha1.brightness = bright;
+  			}
+  			if(this.add.hitTest(event.point, {stroke:true})){
+  			  this.pallette.push(this.pal);
+  			  console.log(this.pallette)
+  			}
+  		}
+	};
+  brush = {
+    init: function(){
+      _.bindAll(this);
+      this.layer = new Layer();
+			this.tool = new Tool();
+			this.tool.onMouseDrag = this.mouseDrag;
+			this.tool.onMouseUp = this.mouseUp;
+			this.tool.onMouseDown = this.mouseDown;
+			this.tool.activate();
+			view.draw()
+    },
+    remove:function(){
+      this.layer.remove();
+    },
+    selector: function(){
+       
+    },
+    mouseDown:function(event){
+      
+    },
+    mouseDrag:function(event){
+      
+    },
+    mouseUp:function(event){
+      
+    },
+  }
+  write = {
+    init: function(check, pos){
+      globs.active = this;
+      var pos = pos;
+      _.bindAll(this);
+      this.settings();
+      this.curses();
+      if (!check && !this.layer){
+        console.log('yup');
+        this.layer = this.layer || [];
+        } 
+      if(check && this.layer[0].children){
+         _.each(this.layer[0].children, function(l){l.fillColor = globs.color})
+      }
+      this.writer(pos);
+			this.tool = new Tool();
+			this.tool.onMouseDrag = this.mouseDrag;
+			this.tool.onMouseUp = this.mouseUp;
+			this.tool.onMouseDown = this.mouseDown;
+			this.tool.onKeyDown = this.keyDown;
+			this.tool.onKeyUp = this.keyUp;
+			this.tool.activate();
+			view.draw()
+    },
+    curses: function(){
+      if (this.cursor){this.cursor.remove();}
+      this.cursor = new Path.Rectangle(-10,-10,this.fontSize+2, 22);
+      this.cursor.fillColor = this.color;
+      if (this.text){
+        this.cursor.position = this.text.position.add((12*this.text.content.length)+10,-5);
+      }
+    },
+    remove:function(){
+      this.cursor.remove();
+    },
+    settings:function(){
+      this.font = 'Courier';
+      this.fontSize = 15;
+      this.color = globs.color.clone();
+      this.justify = 'left';
+      this.lineSpacing = 0;
+      this.kerning = 0;
+    },
+    writer: function(pos){          
+      this.tProto = new PointText();
+      this.tProto.paragraphStyle.justification = this.justify;
+      this.tProto.characterStyle.fontSize = this.fontSize;
+      this.tProto.characterStyle.font = this.font;
+      this.tProto.fillColor = this.color;
+      if (pos && typeof pos == 'object') {
+        //this.layer[0].fillColor = this.color;
+        //this.text.fillColor = this.color;
+        this.text = this.tProto.clone();
+        this.text.position = pos;
+        this.cursor.position = this.text.position.add((12*this.text.content.length)+10,-5);
+        this.cursor.fillColor = this.color;
+      }  
+      if (this.text){
+        this.text.fillColor = this.color
+      }
+    },
+    keyDown:function(event){
+      if (event.key == 'space'){
+        event.preventDefault();
+        this.text.content += ' ';
+        this.cursor.position = this.text.position.add((12*this.text.content.length)+10,-5);
+      }
+      else if (event.key == 'backspace'){
+        event.preventDefault();
+        function backspace (x){
+          //var layer = this.layer[0];
+          var c = x.content || null;
+          var l = c ? c.length : null;
+          if (l == 0 || !l){
+            write.layer[0].children.pop();
+            //write.text = _.last(write.layer[0].children);
+            if (write.layer[0].children.length == 0){
+              write.layer.shift();
+            }
+            write.text = _.last(write.layer[0].children);
+            backspace(write.text);
+          }
+          else{
+           write.text.content = c.slice(0, -1);
+                      write.curses();
+           write.cursor.position = write.text.position.add((12*write.text.content.length)+10,-5);
+          }
+        }backspace(this.text);
+        //view.draw();
+      }
+      else if (event.key == 'enter'){
+        var pos = this.text.position.add([0,this.fontSize]);
+        this.cursor.remove();
+        this.init(true, pos)
+      }
+      else {
+        this.text.content += event.character;
+       this.cursor.position = this.text.position.add((12*this.text.content.length)+10,-5);
+      }
+    },
+    keyUp:function(event){
+      
+    },
+    mouseDown:function(event){
+      this.txt.cursor.position = event.point.add(5,-5);
+      var layer = new Layer();
+      this.layer = this.txt.layer;
+      this.txt.layer.unshift(layer);
+      this.txt.text = this.tProto.clone();
+      this.txt.text.position = event.point;
+    },
+    mouseDrag:function(event){
+    },
+    mouseUp:function(event){
+      
+    },
+  }
+//draw.init();
+menu.init();  
+init.init()
+};
+
+	</script>
+  <style>
+  body, canvas, .canvas{
+    background:#fff;
+    cursor: crosshair;
+  }
+  #box{
+    z-index:3;
+    background:red;
+    height:76px;
+    width:300px;
+    display:none;
+    position:absolute;
+    top:10px;
+  }
+  #tools{
+    width:100%;
+    height:40px;
+    position:fixed;
+    bottom:0;
+    left:0;
+    background:#c1c2c3;
+    z-index:1000;
+    text-align:center;
+  }
+  #options{
+    height:100%;
+    width:40px;
+    position:fixed;
+    top:0;
+    left:0;
+    background:#c1c2c3;
+    z-index:1000;
+    text-align:left;
+  }
+  #tools a{
+    font-size:20px;
+    margin: 0 30px
+  }
+  </style>
+
+</head>
+<body>
+	<canvas id="canvas" resize style="background:white"></canvas>
+  <div id="box"></div>
+  <div id="tools"><a href="javascript:write.init();">write  </a><a href="javascript:colorPicker.init();"> color picker </a><a href="javascript:draw.init()"> draw </a></div>
+
+</body>
+	<script type="text/javascript">
+var dropzone = document.getElementById('tools');
+dropzone.ondragover = function () { this.className = 'hover'; return false; };
+dropzone.ondragend = function () { this.className = ''; return false; };
+dropzone.ondrop = function (e){
+    ees = e;
+    files = e.dataTransfer.files,
+    file = files[0];
+    reader = new FileReader();        
+    reader.onload = function (event) {
+      even = event;
+      console.log(event.target.result);
+      var img = document.createElement('img');
+      img.src=event.target.result;
+      img.id = 'raster';
+      img.style.zIndex = 9000;
+      var cvas = document. getElementById('canvas');
+      document.body.insertBefore(img, cvas );
+      var raster = new Raster('raster')
+      view.draw()
+    };
+    reader.readAsDataURL(files[0])
+    //console.log(t.result);
+    return false;
+};
+	</script>
+<script type="text/javascript">
+if ('standalone' in navigator && !navigator.standalone && (/iphone|ipod|ipad/gi).test(navigator.platform) && (/Safari/i).test(navigator.appVersion)) {
+	document.write('<link rel="stylesheet" href="../stylesheets/add2home.css">');
+	document.write('<script type="application/javascript" src="../javascripts/add2home.js"><\/s' + 'cript>');
+}
+</script>
+</html>
